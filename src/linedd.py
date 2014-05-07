@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 def usage():
-    print("Usage: linedd <input file> <output file> command\n")
+    print("Usage: " + sys.argv[0] + " <input file> <output file> command\n")
     sys.exit(0)
 
 command=""
@@ -23,9 +23,15 @@ expect=None
 backward=False
 linear=False
 use_signal=False
+abortOnExistingFile=False
+allowOverwritingBackups=True
+
 while(len(sys.argv)>4):
-    
-    if(sys.argv[1]=='--backward'):
+    if(sys.argv[1]=='--help'):
+        usage()
+    elif(sys.argv[1]=='-h'):
+        usage()       
+    elif(sys.argv[1]=='--backward'):
         backward=True
         sys.argv.pop(1)
     elif(sys.argv[1]=='--expect'):
@@ -52,8 +58,12 @@ while(len(sys.argv)>4):
         sys.argv.pop(1)
         print("Ending at line " + str(last))
     else:
-        print("Unknown argument " + sys.argv[1])
-        sys.exit(1)   
+        print("Unknown argument " + sys.argv[1])        
+        sys.exit(1)  
+if(len(sys.argv)!=4):
+    usage();
+
+         
 infile = sys.argv[1]
 if (not infile):
     print("Input file " + infile + " doesn't exist, aborting!"); 
@@ -65,6 +75,8 @@ with open(infile) as f:
 outfile = sys.argv[2];
 
 if ( os.path.exists(outfile)):
+    if(abortOnExistingFile):
+        print("Output file " + outfile + " already exists, aborting")
     
     mfile=outfile+".backup"
     if ( os.path.exists(mfile)):
@@ -72,10 +84,13 @@ if ( os.path.exists(outfile)):
         while(mnum<10 and os.path.exists(mfile+str(mnum))):
             mnum+=1
         mfile = mfile+str(mnum)
-    if(os.path.exists(mfile)):
-        print("Output file " + outfile + " already exists, too many backups already made, aborting!"); 
-        sys.exit(0)
+    if(os.path.exists(mfile) and not allowOverwritingBackups):        
+        print("Output file " + outfile + " already exists, too many backups already made, over-writing the last one!"); 
+        
     else:
+        if os.path.exists(mfile):
+            print("Output file " + outfile + " already exists, too many backups already made, over-writing " + outfile + "!");      
+        
         print("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile,mfile) 
         
@@ -137,15 +152,16 @@ if last<0:
 
 
 changed=True
-round = 1
+round = 0
 nremoved=0
 num_left = last-first
 #Todo: improve on this with a binary search...
 while(changed):
     changed=False
     ntried=0
+    round+=1
     print("Round " + str(round) + ":Tried " + str(ntried) +", Removed " + str(nremoved) + "/"+str(len(enabled)-first), end='\r' )
-    nsize = num_enabled-first
+    nsize = last-first
     
     stride =  num_left if not linear else 1
     while(stride>=1):
@@ -202,8 +218,6 @@ while(changed):
         assert(len(disabledSet)==0);
         if(stride==1):
             break
-        m = math.floor( stride/2.0)
-        mi = int(m)
         stride = int(math.floor( stride/2.0))
         
             
@@ -212,5 +226,5 @@ while(changed):
 #just in case this file got over-written at some point.   
 writeTo(outfile)    
 os.remove(testingFileName)
-print("Done. Removed " + str(nremoved) + "/"+str(len(enabled)-first) + " lines.         ")
+print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/"+str(len(enabled)-first) + " lines.         ")
    
