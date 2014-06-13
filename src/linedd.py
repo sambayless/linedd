@@ -51,6 +51,7 @@ Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file"
 
 parser = argparse.ArgumentParser(description="A line-oriented delta debugger.\nUsage: " + os.path.basename(sys.argv[0]) + " [options] <input_file> <output_file> command", formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS) 
 
+#optional arguments
 parser.add_argument("--expect", type=int, help="Expected exit code. If supplied, linedd will skip the initial execution of the command (default: None)", default=None)
 
 parser.add_argument('--signal', dest='signal', action='store_true', help="Preserve the full unix termination-signal, instead of just the exit code (default: --no-signal)")
@@ -72,7 +73,7 @@ parser.set_defaults(linear=False)
 parser.add_argument("--first", type=int, help="Don't remove lines before this one  (default: 0)", default=0)
 parser.add_argument("--last", type=int, help="Don't remove lines after this one (-1 for infinity)  (default: -1)", default= -1)
 
-
+#positional arguments
 parser.add_argument("infile", type=str, help="Path to input file (this file will not be altered); this file will be appended to the command before it is executed")
 parser.add_argument("outfile", type=str, help="Path to store reduced input file in")
 parser.add_argument("command", type=str, help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command", nargs=argparse.REMAINDER, action="store")
@@ -96,6 +97,7 @@ if quiet:
 else:
     def print_out(*args, **kwargs):
         print(*args, **kwargs)
+        sys.stdout.flush()
 
 def error_quit(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -104,7 +106,6 @@ def error_quit(*args, **kwargs):
 infile = args.infile
 if (not infile):
     error_quit("Input file " + infile + " doesn't exist, aborting!"); 
-
 
 with open(infile) as f:
     original_lines = f.readlines()
@@ -141,7 +142,7 @@ def run(filename):
     return retval
 
   
-print_out("Running command: " + command + " " + infile)
+print_out("Executing command: \"" + command + " " + infile + "\"")
 
 skip_sanity = expect is not None #If the user supplied an expected exit code, assume that they are doing so because the run is slow, so skip the sanity check too
 
@@ -192,8 +193,8 @@ while(changed):
     ntried = 0
     round += 1
     cur_removed = 0
-    print_out("Round " + str(round) + ":Tried " + str(ntried) + ", Removed " + str(nremoved) + "/" + str(len(enabled) - first), end='\r')
-    nsize = last - first
+    nsize = last - first - nremoved
+    print_out("Round " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='')
     
     stride = num_left if not linear else 1
     while(stride >= 1):       
@@ -202,12 +203,13 @@ while(changed):
         for i in  range(first, last) if not backward else  range(first, last)[::-1]:       
             if(enabled[i]):
                 nfound += 1
-                ntried += 1
+                
   
                 disabledSet.add(i)
                 enabled[i] = False
                 if(nfound == stride):
                     nfound = 0
+                    ntried += 1
                     writeTo(testingFileName)
                     ret = run(testingFileName)
                     if(ret == expect):
@@ -222,11 +224,12 @@ while(changed):
                         for p in disabledSet:
                             enabled[p] = True
                         disabledSet = set()                        
-                    print_out("Round " + str(round) + ":Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='\r')
+                    print_out("\rRound " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='')
         
         #If there are any remaining elements in the disabled set, then test them here.
         if(len(disabledSet) > 0):                   
             nfound = 0
+            ntried += 1
             writeTo(testingFileName)
             ret = run(testingFileName)
             if(ret == expect):
@@ -234,14 +237,15 @@ while(changed):
                 writeTo(outfile)
                 num_enabled -= len(disabledSet)
                 num_left -= len(disabledSet)
-                nremoved += len(disabledSet)     
+                nremoved += len(disabledSet)   
+                cur_removed += len(disabledSet)   
                 disabledSet = set()           
             else:
                 for p in disabledSet:
                     enabled[p] = True
                 disabledSet = set()
                 
-            print_out("Round " + str(round) + ":Tried " + str(ntried) + ", Removed " + str(nremoved) + "/" + str(nsize), end='\r')
+            print_out("\rRound " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='')
             
         assert(len(disabledSet) == 0);
         if(stride == 1):
@@ -250,7 +254,7 @@ while(changed):
         stride = stride // 2
         assert(stride > 0)
             
-    print_out("Round " + str(round) + ":Tried " + str(ntried) + ", Removed " + str(nremoved) + "/" + str(nsize), end='\n')       
+    print_out("\rRound " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='\n')       
              
 #just in case this file got over-written at some point.   
 writeTo(outfile)    
