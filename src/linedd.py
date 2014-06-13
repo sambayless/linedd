@@ -1,6 +1,10 @@
 #!/usr/bin/env python
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+import argparse
+import os
+import shutil
+import sys
+import tempfile
 
 '''
 Copyright (c) 2014, Sam Bayless
@@ -45,62 +49,53 @@ Where the file_to_minimize is the file you start with, and output_file is where 
 Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
-import os
-import shutil
-import sys
-import tempfile
 
 def usage():
-    print("Usage: " + sys.argv[0] + " <input file> <output file> command")
+    print("Usage: " + sys.argv[0] + "[options] <input_file> <output_file> command")
     sys.exit(0)
+parser = argparse.ArgumentParser(description="A line-oriented delta debugger.\nUsage: " + os.path.basename( sys.argv[0]) + " [options] <input_file> <output_file> command", formatter_class=argparse.RawTextHelpFormatter,usage=argparse.SUPPRESS) 
+#argparse.ArgumentParser(description="A line-oriented delta debugger.\n Usage: " + sys.argv[0] + " <input file> <output file> command")
 
-command=""
-first=0
-last=-1
-expect=None
-backward=False
-linear=False
-use_signal=False
+parser.add_argument('--reverse',dest='reverse',action='store_true',help="Remove lines starting from the end of the file, rather than the beginning.")
+parser.add_argument('--no-reverse',dest='reverse',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(reverse=False)
+
+parser.add_argument('--linear',dest='linear',action='store_true',help="Only remove lines one-by-one (instead of trying a binary search).")
+parser.add_argument('--no-linear',dest='linear',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(linear=False)
+
+parser.add_argument('--signal',dest='signal',action='store_true',help="Preserve the full unix termination-signal, instead of just the exit code.")
+parser.add_argument('--no-signal',dest='signal',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(signal=False)
+
+parser.add_argument('-q','--quiet',dest='quiet',action='store_true',help="Suppress progress information.")
+parser.add_argument('--no-quiet',dest='quiet',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(quiet=False)
+
+
+
+parser.add_argument("--first",type=int,help="Don't remove lines before this one.",default=0)
+parser.add_argument("--last",type=int,help="Don't remove lines after this one (-1 for infinity).",default=-1)
+
+parser.add_argument("--expect",type=int,help="Expected exit code. If supplied, linedd will skip the initial execution of the command.",default=None)
+
+parser.add_argument("infile",type=str,help="Input file to reduce.")
+parser.add_argument("outfile",type=str,help="File to store reduced input.")
+parser.add_argument("command",type=str,help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command.", nargs=argparse.REMAINDER, action="store")
+
+
+args = parser.parse_args()
+
+first=args.first
+last=args.last
+expect=args.expect
+backward=args.reverse
+linear=args.linear
+use_signal=args.signal
+quiet=args.quiet
+
 abortOnExistingFile=False
 allowOverwritingBackups=True
-quiet=False
-while(len(sys.argv)>4):
-    if(sys.argv[1]=='--help'):
-        usage()
-    elif(sys.argv[1]=='-h'):
-        usage()       
-    elif(sys.argv[1]=='--reverse'):
-        backward=True
-        sys.argv.pop(1)
-    elif(sys.argv[1]=='--expect'):
-        expect=int(sys.argv[2])
-        sys.argv.pop(1)
-        sys.argv.pop(1)
-    elif(sys.argv[1]=='--signal'):
-        use_signal=True
-        sys.argv.pop(1)        
-    elif(sys.argv[1]=='--linear'):
-        linear=True
-        sys.argv.pop(1)               
-    elif(sys.argv[1]=='-q' or sys.argv[1]=='--quiet' ):
-        quiet=True
-        sys.argv.pop(1)          
-    elif(sys.argv[1]=='-f'):
-        first=int(sys.argv[2])
-        sys.argv.pop(1)
-        sys.argv.pop(1)
-        print("Starting at line " + str(first))    
-    elif(sys.argv[1]=='-l'):
-        last=int(sys.argv[2])
-        sys.argv.pop(1)
-        sys.argv.pop(1)
-        print("Ending at line " + str(last))
-    else:
-        print("Unknown argument " + sys.argv[1])    
-        sys.exit(1)  
-        
-if(len(sys.argv)!=4):
-    usage();
 
 if quiet:
     def print_out(*args, **kwargs):
@@ -113,7 +108,7 @@ def error_quit(*args, **kwargs):
     print(*args,file=sys.stderr, **kwargs)
     sys.exit(1)
          
-infile = sys.argv[1]
+infile = args.infile
 if (not infile):
     error_quit("Input file " + infile + " doesn't exist, aborting!"); 
 
@@ -121,7 +116,7 @@ if (not infile):
 with open(infile) as f:
     original_lines = f.readlines()
 
-outfile = sys.argv[2];
+outfile = args.outfile;
 
 if ( os.path.exists(outfile)):
     if(abortOnExistingFile):
@@ -143,7 +138,7 @@ if ( os.path.exists(outfile)):
         print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile,mfile) 
             
-command = sys.argv[3]
+command=" ".join(args.command)
 
 def run(filename):
     
