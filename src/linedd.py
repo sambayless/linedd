@@ -49,39 +49,33 @@ Where the file_to_minimize is the file you start with, and output_file is where 
 Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
-
-def usage():
-    print("Usage: " + sys.argv[0] + "[options] <input_file> <output_file> command")
-    sys.exit(0)
 parser = argparse.ArgumentParser(description="A line-oriented delta debugger.\nUsage: " + os.path.basename( sys.argv[0]) + " [options] <input_file> <output_file> command", formatter_class=argparse.RawTextHelpFormatter,usage=argparse.SUPPRESS) 
-#argparse.ArgumentParser(description="A line-oriented delta debugger.\n Usage: " + sys.argv[0] + " <input file> <output file> command")
 
-parser.add_argument('--reverse',dest='reverse',action='store_true',help="Remove lines starting from the end of the file, rather than the beginning.")
-parser.add_argument('--no-reverse',dest='reverse',action='store_false', help=argparse.SUPPRESS)
-parser.set_defaults(reverse=False)
+parser.add_argument("--expect",type=int,help="Expected exit code. If supplied, linedd will skip the initial execution of the command (default: None)",default=None)
 
-parser.add_argument('--linear',dest='linear',action='store_true',help="Only remove lines one-by-one (instead of trying a binary search).")
-parser.add_argument('--no-linear',dest='linear',action='store_false', help=argparse.SUPPRESS)
-parser.set_defaults(linear=False)
-
-parser.add_argument('--signal',dest='signal',action='store_true',help="Preserve the full unix termination-signal, instead of just the exit code.")
+parser.add_argument('--signal',dest='signal',action='store_true',help="Preserve the full unix termination-signal, instead of just the exit code (default: --no-signal)")
 parser.add_argument('--no-signal',dest='signal',action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(signal=False)
 
-parser.add_argument('-q','--quiet',dest='quiet',action='store_true',help="Suppress progress information.")
+parser.add_argument('-q','--quiet',dest='quiet',action='store_true',help="Suppress progress information (default: --no-quiet)")
 parser.add_argument('--no-quiet',dest='quiet',action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(quiet=False)
 
+parser.add_argument('--reverse',dest='reverse',action='store_true',help="Remove lines starting from the end of the file, rather than the beginning (default: --no-reverse)")
+parser.add_argument('--no-reverse',dest='reverse',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(reverse=False)
+
+parser.add_argument('--linear',dest='linear',action='store_true',help="Only remove lines one-by-one, instead of applying a binary search (default: --no-linear)")
+parser.add_argument('--no-linear',dest='linear',action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(linear=False)
+
+parser.add_argument("--first",type=int,help="Don't remove lines before this one  (default: 0)",default=0)
+parser.add_argument("--last",type=int,help="Don't remove lines after this one (-1 for infinity)  (default: -1)",default=-1)
 
 
-parser.add_argument("--first",type=int,help="Don't remove lines before this one.",default=0)
-parser.add_argument("--last",type=int,help="Don't remove lines after this one (-1 for infinity).",default=-1)
-
-parser.add_argument("--expect",type=int,help="Expected exit code. If supplied, linedd will skip the initial execution of the command.",default=None)
-
-parser.add_argument("infile",type=str,help="Input file to reduce.")
-parser.add_argument("outfile",type=str,help="File to store reduced input.")
-parser.add_argument("command",type=str,help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command.", nargs=argparse.REMAINDER, action="store")
+parser.add_argument("infile",type=str,help="Path to input file (this file will not be altered); this file will be appended to the command before it is executed")
+parser.add_argument("outfile",type=str,help="Path to store reduced input file in")
+parser.add_argument("command",type=str,help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command", nargs=argparse.REMAINDER, action="store")
 
 
 args = parser.parse_args()
