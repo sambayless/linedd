@@ -19,7 +19,7 @@ For example, if you have a configuration file "config.txt":
     maximized=false
     startup=False
 
-with an error on line 3 ('false' should be capitalized), and
+with an error on line 2 ('false' should be capitalized), and
 
     myProgram --myFlag --configuration=config.txt 
 
