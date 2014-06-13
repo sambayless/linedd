@@ -1,50 +1,50 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import division
 from __future__ import print_function
 
 '''
 Copyright (c) 2014, Sam Bayless
-All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer. 
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies, 
-either expressed or implied, of the FreeBSD Project.
+ Permission is hereby granted, free of charge, to any person obtaining
+ a copy of this software and associated documentation files (the
+ "Software"), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 """
 linedd is a delta-debugger for line-oriented text formats, used for minimizing inputs to programs while preserving errors.
 In contrast to most delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond line endings.
-It can be directly employed, without modification, to delta-debug _any_ line-oriented text file.
+It can be directly employed, without modification, to delta-debug any line-oriented text file. 
  
 Given a system command of the form "command argument1 argument2 file", (with file as the last argument),
 linedd will execute that command on the file and record the exit code. It will then repeatedly attempt to remove one or more individual lines
 from the file, each time executing the original command on the new, smaller file. If the exit code of the command changes after removing
 a line, linedd will backtrack, replacing the line and removing a new one. 
 
-In this way it continues removing lines until it reaches a fixed point.  
+In this way it continues removing lines until it reaches a fixed point.
+
+Usage is as simple as
+
+$linedd <file_to_minimize> <output_file> "command arg1 arg2 arg3"
+
+Where the file_to_minimize is the file you start with, and output_file is where linedd should write its minimzed version. Command is any arbitrary command, optionally with arguments.
+Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
-import math
 import os
 import shutil
 import sys
@@ -78,8 +78,7 @@ while(len(sys.argv)>4):
         sys.argv.pop(1)
     elif(sys.argv[1]=='--signal'):
         use_signal=True
-        sys.argv.pop(1)
-        
+        sys.argv.pop(1)        
     elif(sys.argv[1]=='--linear'):
         linear=True
         sys.argv.pop(1)               
@@ -90,8 +89,7 @@ while(len(sys.argv)>4):
         first=int(sys.argv[2])
         sys.argv.pop(1)
         sys.argv.pop(1)
-        print("Starting at line " + str(first))
-    
+        print("Starting at line " + str(first))    
     elif(sys.argv[1]=='-l'):
         last=int(sys.argv[2])
         sys.argv.pop(1)
@@ -144,10 +142,7 @@ if ( os.path.exists(outfile)):
         
         print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile,mfile) 
-        
-    
-    
-    
+            
 command = sys.argv[3]
 
 def run(filename):
@@ -208,18 +203,19 @@ while(changed):
     changed=False
     ntried=0
     round+=1
+    cur_removed = 0
     print_out("Round " + str(round) + ":Tried " + str(ntried) +", Removed " + str(nremoved) + "/"+str(len(enabled)-first), end='\r' )
     nsize = last-first
     
     stride =  num_left if not linear else 1
     while(stride>=1):       
-        nfound=0
-        i=0
+        nfound=0      
         disabledSet=set()
         for i in  range(first,last) if not backward else  range(first,last)[::-1]:       
             if(enabled[i]):
                 nfound+=1
                 ntried+=1
+  
                 disabledSet.add(i)
                 enabled[i]=False
                 if(nfound==stride):
@@ -231,13 +227,14 @@ while(changed):
                         writeTo(outfile)
                         num_enabled-=len(disabledSet)
                         num_left-=len(disabledSet)
-                        nremoved+=len(disabledSet)     
+                        nremoved+=len(disabledSet)
+                        cur_removed+= len(disabledSet)    
                         disabledSet=set()           
                     else:           
                         for p in disabledSet:
                             enabled[p]=True
                         disabledSet=set()                        
-                    print_out("Round " + str(round)  + ":Tried " + str(ntried) +", Removed " + str(nremoved) + "/"+str(nsize), end='\r' )
+                    print_out("Round " + str(round)  + ":Tried " + str(ntried) +", Removed " + str(cur_removed) + "/"+str(nsize), end='\r' )
         
         #If there are any remaining elements in the disabled set, then test them here.
         if(len(disabledSet)>0):                   
@@ -270,4 +267,4 @@ while(changed):
 #just in case this file got over-written at some point.   
 writeTo(outfile)    
 os.remove(testingFileName)
-print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/"+str(len(enabled)-first) + " lines.         ")
+print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/"+str(len(enabled)-first) + " lines. Minimized file written to " + outfile +".")
