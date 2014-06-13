@@ -1,40 +1,42 @@
 linedd
 ==============
 
-linedd is a [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text formats, for minimizing error-causing inputs to programs while preserving errors.
+linedd is a [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code).
+
 In contrast to most delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings.
 This means that it can be used without modification to delta-debug any line-oriented text file.  
 
-Given a system command of the form 'command argument1 argument2 file', (with file as the last argument),
-linedd will execute that command on the file and record the exit code. It will then repeatedly attempt to remove one or more individual lines
-from the file, each time executing the original command on the new, smaller file. If the exit code of the command changes after removing
-a line, linedd will backtrack, replacing the line and removing a new one. 
+Using linedd is as simple as:
 
-In this way it continues removing lines until it reaches a fixed point.
+    linedd <file_to_minimize> <output_file> command_to_execute
 
-Usage is as simple as
+Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command, and may include spaces and arguments. 
+linedd will then repeatedly execute ```command output_file``` while removing lines from ```output_file```. linedd assumes that the command expects the file as its last argument. 
 
-    linedd <file_to_minimize> <output_file> "command arg1 arg2 arg3"
+For example, if you have a configuration file "config.txt":
 
-Where the 'file_to_minimize' is the file you start with, and 'output_file' is where linedd should write its minimzed version. 'command' is any arbitrary command, and may include spaces and arguments. 
-linedd will then repeatedly execute 'command output_file' while removing lines from 'output_file'. linedd assumes that the command expects the file as its last argument. 
-
-For example, if you have a config file 'cofiguration.txt':
-
-   windowed=True
-   maximized=false
-   startup=False
+    windowed=True
+    maximized=false
+    startup=False
 
 with an error on line 3 ('false' should be capitalized), and
 
-   myProgram --configuration=configuration.txt 
+    myProgram --myFlag --configuration=config.txt 
 
-crashes with exit code 1 trying to read in that configuration file, then executing 
+crashes with exit code 1 trying to read config.txt, then executing 
 
-   linedd configuration.txt reduced_config.txt "myProgram --configuration="
-   
-will produce a reduced_config.txt containing just the error-inducing line,
+    linedd config.txt reduced_config.txt "myProgram --myFlag --configuration="
+    
+will create reduced_config.txt, containing just the error-inducing line
 
-   maximized=false
+    maximized=false
+    
+Technical Stuff
+---------------
 
-linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools/).
+linedd will copy ```file_to_minimize``` to ```output_file```, and then execute ```command output_file``` and record the exit code. It will then repeatedly attempt to remove one or more individual lines
+from ```output_file```, each time executing ```command output_file```. If the exit code is preserved on this smaller file, linedd will keep the change and continue trying to remove other lines; if the exit code changes, linedd will backtrack, replacing the line and removing a new one. 
+
+In this way it continues removing lines until it reaches a fixed point.
+
+linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools/). 
