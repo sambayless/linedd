@@ -70,7 +70,7 @@ parser.add_argument('--linear', dest='linear', action='store_true', help="Only r
 parser.add_argument('--no-linear', dest='linear', action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(linear=False)
 
-parser.add_argument("--first", type=int, help="Don't remove lines before this one  (default: 0)", default=0)
+parser.add_argument("--first", type=int, help="Don't remove lines before this one  (default: 1)", default=1)
 parser.add_argument("--last", type=int, help="Don't remove lines after this one (-1 for infinity)  (default: -1)", default= -1)
 
 #positional arguments
@@ -79,9 +79,14 @@ parser.add_argument("outfile", type=str, help="Path to store reduced input file 
 parser.add_argument("command", type=str, help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command", nargs=argparse.REMAINDER, action="store")
 
 args = parser.parse_args()
+if(args.first<1):
+	args.first=1
+if(args.last>=0 and args.last<=args.first):
+	print("Last line (%d) is not after the first line (%d) to reduce, aborting."%(args.first,args.last))
+	sys.exit(0);
 
-first = args.first
-last = args.last
+first = args.first-1 #Users usually expect line numbers in text files to be 1-based, not 0-based, so subtract one.
+last =  args.last-1 if args.last>0 else args.last
 expect = args.expect
 backward = args.reverse
 linear = args.linear
