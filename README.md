@@ -8,7 +8,7 @@ This means that it can be used without modification to delta-debug any line-orie
 
 Using linedd is as simple as:
 
-    linedd <file_to_minimize> <output_file> command_to_execute
+    linedd file_to_minimize output_file command_to_execute
 
 Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command, and may include spaces and arguments. 
 linedd will then repeatedly execute ```command output_file``` while removing lines from ```output_file```. linedd assumes that the command expects the file as its last argument. 
@@ -39,4 +39,4 @@ from ```output_file```, each time executing ```command output_file```. If the ex
 
 In this way it continues removing lines until it reaches a fixed point.
 
-linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools/). 
+linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools). 
