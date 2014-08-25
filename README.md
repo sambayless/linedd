@@ -8,7 +8,7 @@ This means that it can be used without modification to delta-debug any line-orie
 
 Using linedd is as simple as:
 
-    linedd <file_to_minimize> <output_file> command_to_execute
+    linedd file_to_minimize output_file command
 
 Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command, and may include spaces and arguments. 
 linedd will then repeatedly execute ```command output_file``` while removing lines from ```output_file```. linedd assumes that the command expects the file as its last argument. 
@@ -34,9 +34,9 @@ will create reduced_config.txt, containing just the error-inducing line
 Technical Stuff
 ---------------
 
-linedd will copy ```file_to_minimize``` to ```output_file```, and then execute ```command output_file``` and record the exit code. It will then repeatedly attempt to remove one or more individual lines
+linedd will copy ```file_to_minimize``` to ```output_file``` and then execute ```command output_file``` and record the exit code. It will then repeatedly attempt to remove one or more individual lines
 from ```output_file```, each time executing ```command output_file```. If the exit code is preserved on this smaller file, linedd will keep the change and continue trying to remove other lines; if the exit code changes, linedd will backtrack, replacing the line and removing a new one. 
 
 In this way it continues removing lines until it reaches a fixed point.
 
-linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools/). 
+linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools). 
