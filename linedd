@@ -195,10 +195,14 @@ if not skip_sanity:
 if last < 0:
     last = len(original_lines)
 
+if(first>=len(original_lines)):
+	error_quit("First line to minimize was " + str(first) + ", but file only has " + str(len(original_lines)) + " lines, aborting.")
+
 changed = True
 round = 0
 nremoved = 0
 num_left = last - first
+
 
 
 #This executes a simple binary search, first removing half the lines at a time, then a quarter of the lines at a time, and so on until eventually individual lines are removed one-by-one.
