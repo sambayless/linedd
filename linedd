@@ -111,9 +111,18 @@ def error_quit(*args, **kwargs):
 infile = args.infile
 if (not infile):
     error_quit("Input file " + infile + " doesn't exist, aborting!"); 
+try:
+	with open(infile) as f:
+	    original_lines = f.readlines()
+except FileNotFoundError as e:
+	error_quit("Input file " + infile + " doesn't exist, aborting!"); 
 
-with open(infile) as f:
-    original_lines = f.readlines()
+if(len(args.command)==0):
+	#This is a very common error - it usually means the user forgot to set an output file.	
+
+	error_quit("No command specified, aborting.\nusage: linedd <inputfile> <outputfile> <command>" + "\n(output file was specified as " + str(args.outfile) + ")." if args.outfile else "" ); 
+
+command = " ".join(args.command)
 
 outfile = args.outfile;
 
@@ -137,7 +146,7 @@ if (os.path.exists(outfile)):
         print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile, mfile) 
             
-command = " ".join(args.command)
+
 
 def run(filename):
     
