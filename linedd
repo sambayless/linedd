@@ -62,6 +62,10 @@ parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', help="Su
 parser.add_argument('--no-quiet', dest='quiet', action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(quiet=False)
 
+parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help="Show extra progress information (default: --no-verbose)")
+parser.add_argument('--no-verbose', dest='verbose', action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(verbose=False)
+
 parser.add_argument('--reverse', dest='reverse', action='store_true', help="Remove lines starting from the end of the file, rather than the beginning (default: --no-reverse)")
 parser.add_argument('--no-reverse', dest='reverse', action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(reverse=False)
@@ -92,6 +96,7 @@ backward = args.reverse
 linear = args.linear
 use_signal = args.signal
 quiet = args.quiet
+verbose=args.verbose and not args.quiet
 
 abortOnExistingFile = False
 allowOverwritingBackups = True
@@ -149,11 +154,17 @@ if (os.path.exists(outfile)):
 
 
 def run(filename):
-    
-    retval = os.system(command + " " + filename + " >/dev/null 2>&1");
-    if not use_signal:
-        retval = retval >> 8
-    return retval
+	cmd = command + " " + filename
+	if(verbose):
+		print_out("running: " + cmd)
+		retval = os.system(cmd + " 2>&1");
+		print_out("exit " + str(retval) + "(" + str(retval>>8) + ")")
+	else:
+		retval = os.system(cmd+ " >/dev/null 2>&1");
+    	
+	if not use_signal:
+		retval = retval >> 8
+	return retval
 
   
 print_out("Executing command: \"" + command + " " + infile + "\"")
@@ -220,9 +231,7 @@ while(changed):
         disabledSet = set()
         for i in  range(first, last) if not backward else  range(first, last)[::-1]:       
             if(enabled[i]):
-                nfound += 1
-                
-  
+                nfound += 1               
                 disabledSet.add(i)
                 enabled[i] = False
                 if(nfound == stride):
@@ -277,4 +286,4 @@ while(changed):
 #just in case this file got over-written at some point.   
 writeTo(outfile)    
 os.remove(testingFileName)
-print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/" + str(len(enabled) - first) + " lines. Minimized file written to " + outfile + ".")
+print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/" + str(last - first) + " lines. Minimized file written to " + outfile + ".")
