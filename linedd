@@ -115,12 +115,12 @@ def error_quit(*args, **kwargs):
          
 infile = args.infile
 if (not infile):
-    error_quit("Input file " + infile + " doesn't exist, aborting!"); 
+    error_quit("Could not read input file " + infile + ", aborting!"); 
 try:
 	with open(infile) as f:
 	    original_lines = f.readlines()
-except FileNotFoundError as e:
-	error_quit("Input file " + infile + " doesn't exist, aborting!"); 
+except IOError as e:
+	error_quit("Could not read input file " + infile + ", aborting!"); 
 
 if(len(args.command)==0):
 	#This is a very common error - it usually means the user forgot to set an output file.	
