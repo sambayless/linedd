@@ -146,7 +146,7 @@ if (os.path.exists(outfile)):
         
     else:
         if os.path.exists(mfile):
-            print_out("Output file " + outfile + " already exists, too many backups already made, over-writing " + outfile + "!");      
+            print_out("Output file " + mfile + " already exists, too many backups already made, over-writing " + mfile + "!");      
         
         print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile, mfile) 
