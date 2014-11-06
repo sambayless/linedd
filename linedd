@@ -115,7 +115,12 @@ def error_quit(*args, **kwargs):
          
 infile = args.infile
 if (not infile):
-    error_quit("Could not read input file " + infile + ", aborting!"); 
+    error_quit("Could not read input file " + infile + ", aborting!");
+     
+#Check if the input file is executable; abort if it is. This check might only work on *nix:
+if os.access(infile, os.X_OK):
+	error_quit("Input file " + infile + " is executable, aborting!")
+	
 try:
 	with open(infile) as f:
 	    original_lines = f.readlines()
@@ -133,7 +138,11 @@ outfile = args.outfile;
 
 if (os.path.exists(outfile)):
     if(abortOnExistingFile):
-        error_quit("Output file " + outfile + " already exists, aborting")
+        error_quit("Output file " + outfile + " already exists, aborting!")
+    
+    #Check if the output file is executable; abort if it is. This check might only work on *nix:
+    if os.access(outfile, os.X_OK):
+    	error_quit("Output file " + outfile + " is executable, aborting!")
     
     mfile = outfile + ".backup"
     if (os.path.exists(mfile)):
@@ -146,9 +155,9 @@ if (os.path.exists(outfile)):
         
     else:
         if os.path.exists(mfile):
-            print_out("Output file " + mfile + " already exists, too many backups already made, over-writing " + mfile + "!");      
-        
-        print_out("Output file " + outfile + " already exists, moving to " + mfile);
+            print_out("Output file " + outfile + " already exists, too many backups already made, over-writing " + mfile + "!");      
+        else:
+        	print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile, mfile) 
             
 
