@@ -112,14 +112,20 @@ else:
 def error_quit(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)
-         
+
+def usage_quit(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+    print("Usage:\t linedd <file_to_minimize> <output_file> command")
+    print("\te.g., if \"./my_program --my_arg my_buggy_file\" exits with code 134, call\n\tlinedd my_buggy_file reduced_file \"./my_program --my_arg\" ")
+    sys.exit(1)
+       
 infile = args.infile
 if (not infile):
     error_quit("Could not read input file " + infile + ", aborting!");
      
 #Check if the input file is executable; abort if it is. This check might only work on *nix:
 if os.access(infile, os.X_OK):
-	error_quit("Input file " + infile + " is executable, aborting!")
+	usage_quit("Input file " + infile + " is executable, aborting!")
 	
 try:
 	with open(infile) as f:
@@ -142,7 +148,7 @@ if (os.path.exists(outfile)):
     
     #Check if the output file is executable; abort if it is. This check might only work on *nix:
     if os.access(outfile, os.X_OK):
-    	error_quit("Output file " + outfile + " is executable, aborting!")
+    	usage_quit("Output file " + outfile + " is executable, aborting!")
     
     mfile = outfile + ".backup"
     if (os.path.exists(mfile)):
