@@ -1,10 +1,9 @@
 linedd
 ==============
 
-linedd is a [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code).
+linedd is a simple [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code).
 
-In contrast to most delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings.
-This means that it can be used without modification to delta-debug any line-oriented text file.  
+In contrast to many delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings. This means that it can be used without modification to delta-debug any line-oriented text file.  
 
 Using linedd is as simple as:
 
@@ -39,4 +38,4 @@ from ```output_file```, each time executing ```command output_file```. If the ex
 
 In this way it continues removing lines until it reaches a fixed point.
 
-linedd is styled after the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools). 
+linedd is styled after [delta](http://delta.tigris.org), as well as the delta-debugging tools developed at the [Institute for Formal Models and Verification](http://fmv.jku.at/fuzzddtools). 
