@@ -49,7 +49,19 @@ Where the file_to_minimize is the file you start with, and output_file is where 
 Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
-parser = argparse.ArgumentParser(description="A line-oriented delta debugger.\nUsage: " + os.path.basename(sys.argv[0]) + " [options] <input_file> <output_file> command", formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS) 
+
+class HelpParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n\n' % message)
+        self.print_help()
+        sys.exit(2)
+
+
+parser = HelpParser(description="linedd: A line-oriented delta debugger.\nUsage: " + os.path.basename(sys.argv[0]) + " [options] <input_file> <output_file> command"
+								+ "\n\nExample: If \"./buggy_program -buggyflag buggy_input.txt\" crashes with error code 139\n" 
+								+ os.path.basename(sys.argv[0]) + " buggy_input.txt minimized_input.txt ./buggy_program -buggyflag"
+								+ "\nA minimized subset of \"buggy_input.txt\" that produces the same error code will be created and stored in \"minimized_input.txt\"."
+								, formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS) 
 
 #optional arguments
 parser.add_argument("--expect", type=int, help="Expected exit code. If supplied, linedd will skip the initial execution of the command (default: None)", default=None)
@@ -81,6 +93,9 @@ parser.add_argument("--last", type=int, help="Don't remove lines after this one 
 parser.add_argument("infile", type=str, help="Path to input file (this file will not be altered); this file will be appended to the command before it is executed")
 parser.add_argument("outfile", type=str, help="Path to store reduced input file in")
 parser.add_argument("command", type=str, help="Command to execute (with the input file will be appended to the end). May include arguments to be passed to the command", nargs=argparse.REMAINDER, action="store")
+
+
+
 
 args = parser.parse_args()
 if(args.first<1):
@@ -116,7 +131,7 @@ def error_quit(*args, **kwargs):
 def usage_quit(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
     print("Usage:\t linedd <file_to_minimize> <output_file> command")
-    print("\te.g., if \"./my_program --my_arg my_buggy_file\" exits with code 134, call\n\tlinedd my_buggy_file reduced_file \"./my_program --my_arg\" ")
+    print("\te.g., if \"./my_program --my_arg my_buggy_file\" exits with code 134, call\n\tlinedd my_buggy_file reduced_file ./my_program --my_arg")
     sys.exit(1)
        
 infile = args.infile
@@ -157,7 +172,7 @@ if (os.path.exists(outfile)):
             mnum += 1
         mfile = mfile + str(mnum)
     if(os.path.exists(mfile) and not allowOverwritingBackups):        
-        print_out("Output file " + outfile + " already exists, too many backups already made, over-writing the last one!"); 
+        error_quit("Output file " + outfile + " already exists, too many backups already made, aborting!"); 
         
     else:
         if os.path.exists(mfile):
