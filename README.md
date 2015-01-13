@@ -3,7 +3,7 @@ linedd
 
 linedd is a simple [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code). linedd is a self-contained python shell script, compatible with both Python 2.7 and Python 3.
 
-In contrast to many delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings. This means that it can be used without modification to delta-debug any line-oriented text file. linedd is similar in spirit to [delta](http://delta.tigris.org), but has a simpler (or just different) interface that may be more convenient (in particular, linedd is intended to be used directly on a buggy program without needing to write a wrapper script).
+In contrast to many delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings. This means that it can be used without modification to delta-debug any line-oriented text file. linedd is similar in spirit to [Delta](http://delta.tigris.org), but has a simpler (or just different) interface that may be more convenient (in particular, linedd is intended to be used directly on a buggy program without needing to write a wrapper script).
 
 Using linedd is as simple as:
 
