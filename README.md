@@ -9,7 +9,7 @@ Using linedd is as simple as:
 
     linedd file_to_minimize output_file command
 
-Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command that returns an exit code indicating an error, and may include spaces and arguments. linedd will then repeatedly execute ```command output_file``` while removing lines from ```output_file```, while ensuring that the exit code of ```command``` is unchanged. linedd assumes that the command expects the file as its last argument. 
+Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command that returns an exit code indicating an error, and may include spaces and arguments. linedd will then repeatedly execute ```command output_file```, removing lines from ```output_file``` while ensuring that the exit code of ```command``` is unchanged. linedd assumes that the command expects the file as its last argument. 
 
 For example, if you have a configuration file "config.txt":
 
