@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
-
+import mmap
 '''
 Copyright (c) 2014, Sam Bayless
 
@@ -89,6 +89,10 @@ parser.set_defaults(linear=False)
 parser.add_argument("--first", type=int, help="Don't remove lines before this one  (default: 1)", default=1)
 parser.add_argument("--last", type=int, help="Don't remove lines after this one (-1 for infinity)  (default: -1)", default= -1)
 
+parser.add_argument("--mmap", dest='mmap',action='store_true', help="Read the input file using a memory-mapped file (disable if linedd is crashing) (default: true)")
+parser.add_argument('--no-mmap', dest='mmap', action='store_false', help=argparse.SUPPRESS)
+parser.set_defaults(mmap=True)
+
 #positional arguments
 parser.add_argument("infile", type=str, help="Path to input file (this file will not be altered); this file will be appended to the command before it is executed")
 parser.add_argument("outfile", type=str, help="Path to store reduced input file in")
@@ -115,6 +119,7 @@ verbose=args.verbose and not args.quiet
 
 abortOnExistingFile = False
 allowOverwritingBackups = True
+use_mmap= args.mmap
 
 if quiet:
     def print_out(*args, **kwargs):
@@ -143,8 +148,21 @@ if os.access(infile, os.X_OK):
 	usage_quit("Input file " + infile + " is executable, aborting!")
 	
 try:
-	with open(infile) as f:
-	    original_lines = f.readlines()
+    original_open_file = open(infile,"r+b")
+    if use_mmap:
+        original_file = mmap.mmap(original_open_file.fileno(),0, access=mmap.ACCESS_READ);
+        n_original_lines= 0
+        while original_file.readline():    
+            n_original_lines += 1
+        original_file.seek(0)
+        #since I'm not sure if you can close the memory mapped file descriptor here,
+        #I'm going to hold on to it until exit... 
+    else:
+        original_lines = original_open_file.readlines()
+        n_original_lines = len(original_lines)
+        original_open_file.close()
+        original_open_file=None
+            
 except IOError as e:
 	error_quit("Could not read input file " + infile + ", aborting!"); 
 
@@ -196,7 +214,9 @@ def run(filename):
 		retval = retval >> 8
 	return retval
 
-  
+
+print_out("Read %d lines from %s"%(n_original_lines, infile))
+
 print_out("Executing command: \"" + command + " " + infile + "\"")
 
 skip_sanity = expect is not None #If the user supplied an expected exit code, assume that they are doing so because the run is slow, so skip the sanity check too
@@ -211,14 +231,24 @@ else:
     print_out("Expected exit code is " + str(expect))
 
 
-num_enabled = len(original_lines)
+num_enabled = n_original_lines
 enabled = [True ] * num_enabled
 
 def writeTo(filename):
-    fout = open(filename, 'w')
-    for l in range(0, len(original_lines)):
-        if(enabled[l]):
-            fout.write(original_lines[l])
+    fout = open(filename, 'wb')
+    if use_mmap:       
+        l = 0
+        line = original_file.readline()
+        while line:
+            if(enabled[l]):  
+                fout.write(line)  
+            l+=1
+            line =  original_file.readline()
+        original_file.seek(0)
+    else:
+        for l in range(n_original_lines):
+            if(enabled[l]):
+                fout.write(original_lines[l])   
     fout.close()
 
 #sanity check: 
@@ -234,10 +264,10 @@ if not skip_sanity:
      
 
 if last < 0:
-    last = len(original_lines)
+    last = n_original_lines
 
-if(first>=len(original_lines)):
-	error_quit("First line to minimize was " + str(first) + ", but file only has " + str(len(original_lines)) + " lines, aborting.")
+if(first>=n_original_lines):
+	error_quit("First line to minimize was " + str(first) + ", but file only has " + str(n_original_lines) + " lines, aborting.")
 
 changed = True
 round = 0
@@ -316,4 +346,6 @@ while(changed):
 #just in case this file got over-written at some point.   
 writeTo(outfile)    
 os.remove(testingFileName)
+if original_open_file is not None:
+    original_open_file.close();
 print("Done. Kept " + str(num_enabled) + " lines, removed " + str(nremoved) + "/" + str(last - first) + " lines. Minimized file written to " + outfile + ".")
