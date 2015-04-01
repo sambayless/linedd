@@ -1,17 +1,15 @@
 linedd
 ==============
 
-linedd is a [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code).
+linedd is a simple [delta-debugger](http://en.wikipedia.org/wiki/Delta_Debugging) for line-oriented text files. You can use it to minimize error-causing inputs to programs while preserving those errors (making it easier to debug your code). linedd is a self-contained python shell script, compatible with both Python 2.7 and Python 3.
 
-In contrast to most delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings.
-This means that it can be used without modification to delta-debug any line-oriented text file.  
+In contrast to many delta-debuggers, linedd isn't specialized to deal with any particular syntax or format, beyond expecting line endings. This means that it can be used without modification to delta-debug any line-oriented text file. linedd is similar in spirit to [Delta](http://delta.tigris.org), but has a simpler (or just different) interface that may be more convenient (in particular, linedd is intended to be used directly on a buggy program without needing to write a wrapper script).
 
 Using linedd is as simple as:
 
     linedd file_to_minimize output_file command
 
-Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command, and may include spaces and arguments. 
-linedd will then repeatedly execute ```command output_file``` while removing lines from ```output_file```. linedd assumes that the command expects the file as its last argument. 
+Where the ```file_to_minimize``` is the file you start with, and ```output_file``` is where linedd should write its minimzed version. ```command``` is any arbitrary command that returns an exit code indicating an error, and may include spaces and arguments. linedd will then repeatedly execute ```command output_file```, removing lines from ```output_file``` while ensuring that the exit code of ```command``` is unchanged. linedd assumes that the command expects the file as its last argument. 
 
 For example, if you have a configuration file "config.txt":
 
@@ -23,11 +21,11 @@ with an error on line 2 ('false' should be capitalized), and
 
     myProgram --myFlag --configuration=config.txt 
 
-crashes with exit code 1 trying to read config.txt, then executing 
+crashes with segmentation fault (exit code 139) trying to read config.txt, then executing 
 
     linedd config.txt reduced_config.txt "myProgram --myFlag --configuration="
     
-will create reduced_config.txt, containing just the error-inducing line
+will create reduced_config.txt, containing just the segfault-inducing line
 
     maximized=false
     
