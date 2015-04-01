@@ -51,8 +51,9 @@ Where the file_to_minimize is the file you start with, and output_file is where 
 Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
-def signal_handler(signal, frame):        
-    sys.exit(0)
+def signal_handler(signal, frame):   
+    error_quit("linedd terminated by interrupt signal.")     
+
 signal.signal(signal.SIGINT, signal_handler)
 #Should linedd also catch keyboard interrupts from child processes?
 
@@ -215,10 +216,13 @@ def run(filename):
         print_out("exit " + str(retval) + "(" + str(retval>>8) + ")")
     else:
         retval = os.system(cmd+ " >/dev/null 2>&1");
-        
+    sig_val=0    
     if not use_signal:
         sig_val = retval & 0xF
         retval = retval >> 8
+    if sig_val == signal.SIGINT:
+        #Convenience method to exit if the user interrupts it while the child is running.
+        error_quit("linedd terminated by interrupt signal from child process (use --signal to prevent this).")
     return retval
 
 
