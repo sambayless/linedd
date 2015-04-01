@@ -3,9 +3,11 @@ from __future__ import division, print_function
 import argparse
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import mmap
+
 '''
 Copyright (c) 2014, Sam Bayless
 
@@ -49,6 +51,10 @@ Where the file_to_minimize is the file you start with, and output_file is where 
 Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file". linedd assumes that the command expects the file as its last argument. 
 """
 
+def signal_handler(signal, frame):        
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
+#Should linedd also catch keyboard interrupts from child processes?
 
 class HelpParser(argparse.ArgumentParser):
     def error(self, message):
@@ -58,15 +64,15 @@ class HelpParser(argparse.ArgumentParser):
 
 
 parser = HelpParser(description="linedd: A line-oriented delta debugger.\nUsage: " + os.path.basename(sys.argv[0]) + " [options] <input_file> <output_file> command"
-								+ "\n\nExample: If \"./buggy_program -buggyflag buggy_input.txt\" crashes with error code 139\n" 
-								+ os.path.basename(sys.argv[0]) + " buggy_input.txt minimized_input.txt ./buggy_program -buggyflag"
-								+ "\nA minimized subset of \"buggy_input.txt\" that produces the same error code will be created and stored in \"minimized_input.txt\"."
-								, formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS) 
+                                + "\n\nExample: If \"./buggy_program -buggyflag buggy_input.txt\" crashes with error code 139\n" 
+                                + os.path.basename(sys.argv[0]) + " buggy_input.txt minimized_input.txt ./buggy_program -buggyflag"
+                                + "\nA minimized subset of \"buggy_input.txt\" that produces the same error code will be created and stored in \"minimized_input.txt\"."
+                                , formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS) 
 
 #optional arguments
 parser.add_argument("--expect", type=int, help="Expected exit code. If supplied, linedd will skip the initial execution of the command (default: None)", default=None)
 
-parser.add_argument('--signal', dest='signal', action='store_true', help="Preserve the full unix termination-signal, instead of just the exit code (default: --no-signal)")
+parser.add_argument('--signal', dest='signal', action='store_true', help="Use the full unix termination-signal, instead of just the exit code (default: --no-signal)")
 parser.add_argument('--no-signal', dest='signal', action='store_false', help=argparse.SUPPRESS)
 parser.set_defaults(signal=False)
 
@@ -89,9 +95,9 @@ parser.set_defaults(linear=False)
 parser.add_argument("--first", type=int, help="Don't remove lines before this one  (default: 1)", default=1)
 parser.add_argument("--last", type=int, help="Don't remove lines after this one (-1 for infinity)  (default: -1)", default= -1)
 
-parser.add_argument("--mmap", dest='mmap',action='store_true', help="Read the input file using a memory-mapped file (disable if linedd is crashing) (default: true)")
+parser.add_argument("--mmap", dest='mmap',action='store_true', help="Read the input file using a memory-mapped file (disable if linedd is crashing) (default: true for 64-bit Python, false for 32-bit Python )")
 parser.add_argument('--no-mmap', dest='mmap', action='store_false', help=argparse.SUPPRESS)
-parser.set_defaults(mmap=True)
+parser.set_defaults(mmap=(sys.maxsize > 2**32))
 
 #positional arguments
 parser.add_argument("infile", type=str, help="Path to input file (this file will not be altered); this file will be appended to the command before it is executed")
@@ -103,10 +109,10 @@ parser.add_argument("command", type=str, help="Command to execute (with the inpu
 
 args = parser.parse_args()
 if(args.first<1):
-	args.first=1
+    args.first=1
 if(args.last>=0 and args.last<=args.first):
-	print("Last line (%d) is not after the first line (%d) to reduce, aborting."%(args.first,args.last))
-	sys.exit(0);
+    print("Last line (%d) is not after the first line (%d) to reduce, aborting."%(args.first,args.last))
+    sys.exit(0);
 
 first = args.first-1 #Users usually expect line numbers in text files to be 1-based, not 0-based, so subtract one.
 last =  args.last-1 if args.last>0 else args.last
@@ -145,8 +151,8 @@ if (not infile):
      
 #Check if the input file is executable; abort if it is. This check might only work on *nix:
 if os.access(infile, os.X_OK):
-	usage_quit("Input file " + infile + " is executable, aborting!")
-	
+    usage_quit("Input file " + infile + " is executable, aborting!")
+    
 try:
     original_open_file = open(infile,"r+b")
     if use_mmap:
@@ -164,12 +170,12 @@ try:
         original_open_file=None
             
 except IOError as e:
-	error_quit("Could not read input file " + infile + ", aborting!"); 
+    error_quit("Could not read input file " + infile + ", aborting!"); 
 
 if(len(args.command)==0):
-	#This is a very common error - it usually means the user forgot to set an output file.	
+    #This is a very common error - it usually means the user forgot to set an output file.    
 
-	error_quit("No command specified, aborting.\nusage: linedd <inputfile> <outputfile> <command>" + "\n(output file was specified as " + str(args.outfile) + ")." if args.outfile else "" ); 
+    error_quit("No command specified, aborting.\nusage: linedd <inputfile> <outputfile> <command>" + "\n(output file was specified as " + str(args.outfile) + ")." if args.outfile else "" ); 
 
 command = " ".join(args.command)
 
@@ -181,7 +187,7 @@ if (os.path.exists(outfile)):
     
     #Check if the output file is executable; abort if it is. This check might only work on *nix:
     if os.access(outfile, os.X_OK):
-    	usage_quit("Output file " + outfile + " is executable, aborting!")
+        usage_quit("Output file " + outfile + " is executable, aborting!")
     
     mfile = outfile + ".backup"
     if (os.path.exists(mfile)):
@@ -196,23 +202,24 @@ if (os.path.exists(outfile)):
         if os.path.exists(mfile):
             print_out("Output file " + outfile + " already exists, too many backups already made, over-writing " + mfile + "!");      
         else:
-        	print_out("Output file " + outfile + " already exists, moving to " + mfile);
+            print_out("Output file " + outfile + " already exists, moving to " + mfile);
         shutil.move(outfile, mfile) 
             
 
 
 def run(filename):
-	cmd = command + " " + filename
-	if(verbose):
-		print_out("running: " + cmd)
-		retval = os.system(cmd + " 2>&1");
-		print_out("exit " + str(retval) + "(" + str(retval>>8) + ")")
-	else:
-		retval = os.system(cmd+ " >/dev/null 2>&1");
-    	
-	if not use_signal:
-		retval = retval >> 8
-	return retval
+    cmd = command + " " + filename
+    if(verbose):
+        print_out("running: " + cmd)
+        retval = os.system(cmd + " 2>&1");
+        print_out("exit " + str(retval) + "(" + str(retval>>8) + ")")
+    else:
+        retval = os.system(cmd+ " >/dev/null 2>&1");
+        
+    if not use_signal:
+        sig_val = retval & 0xF
+        retval = retval >> 8
+    return retval
 
 
 print_out("Read %d lines from %s"%(n_original_lines, infile))
@@ -235,6 +242,7 @@ num_enabled = n_original_lines
 enabled = [True ] * num_enabled
 
 def writeTo(filename):
+
     fout = open(filename, 'wb')
     if use_mmap:       
         l = 0
@@ -251,6 +259,7 @@ def writeTo(filename):
                 fout.write(original_lines[l])   
     fout.close()
 
+    
 #sanity check: 
 testingFile = tempfile.NamedTemporaryFile(delete=False);
 testingFileName = testingFile.name;
@@ -267,7 +276,7 @@ if last < 0:
     last = n_original_lines
 
 if(first>=n_original_lines):
-	error_quit("First line to minimize was " + str(first) + ", but file only has " + str(n_original_lines) + " lines, aborting.")
+    error_quit("First line to minimize was " + str(first) + ", but file only has " + str(n_original_lines) + " lines, aborting.")
 
 changed = True
 round = 0
@@ -275,7 +284,7 @@ nremoved = 0
 num_left = last - first
 
 
-
+disabledSet = set()
 #This executes a simple binary search, first removing half the lines at a time, then a quarter of the lines at a time, and so on until eventually individual lines are removed one-by-one.
 while(changed):
     changed = False
@@ -288,7 +297,7 @@ while(changed):
     stride = num_left if not linear else 1
     while(stride >= 1):       
         nfound = 0      
-        disabledSet = set()
+        disabledSet.clear()
         for i in  range(first, last) if not backward else  range(first, last)[::-1]:       
             if(enabled[i]):
                 nfound += 1               
@@ -306,11 +315,11 @@ while(changed):
                         num_left -= len(disabledSet)
                         nremoved += len(disabledSet)
                         cur_removed += len(disabledSet)    
-                        disabledSet = set()           
+                        disabledSet.clear()         
                     else:           
                         for p in disabledSet:
                             enabled[p] = True
-                        disabledSet = set()                        
+                        disabledSet.clear()                     
                     print_out("\rRound " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='')
         
         #If there are any remaining elements in the disabled set, then test them here.
@@ -326,11 +335,11 @@ while(changed):
                 num_left -= len(disabledSet)
                 nremoved += len(disabledSet)   
                 cur_removed += len(disabledSet)   
-                disabledSet = set()           
+                disabledSet.clear()         
             else:
                 for p in disabledSet:
                     enabled[p] = True
-                disabledSet = set()
+                disabledSet.clear()
                 
             print_out("\rRound " + str(round) + ": Tried " + str(ntried) + ", Removed " + str(cur_removed) + "/" + str(nsize), end='')
             
