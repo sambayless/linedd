@@ -52,7 +52,7 @@ Command will then be executed repeatedly as "command arg1 arg2 arg3 output_file"
 """
 
 def signal_handler(signal, frame):   
-    error_quit("linedd terminated by interrupt signal.")     
+    error_quit("\nlinedd terminated by interrupt signal.")     
 
 signal.signal(signal.SIGINT, signal_handler)
 #Should linedd also catch keyboard interrupts from child processes?
@@ -149,7 +149,9 @@ def usage_quit(*args, **kwargs):
 infile = args.infile
 if (not infile):
     error_quit("Could not read input file " + infile + ", aborting!");
-     
+
+basename, extension = os.path.splitext(infile)
+
 #Check if the input file is executable; abort if it is. This check might only work on *nix:
 if os.access(infile, os.X_OK):
     usage_quit("Input file " + infile + " is executable, aborting!")
@@ -161,12 +163,16 @@ try:
         n_original_lines= 0
         while original_file.readline():    
             n_original_lines += 1
+        if(n_original_lines==0):
+            error_quit("File contains no lines, aborting!")
         original_file.seek(0)
         #since I'm not sure if you can close the memory mapped file descriptor here,
         #I'm going to hold on to it until exit... 
     else:
         original_lines = original_open_file.readlines()
         n_original_lines = len(original_lines)
+        if(n_original_lines==0):
+            error_quit("File contains no lines, aborting!")        
         original_open_file.close()
         original_open_file=None
             
@@ -222,7 +228,7 @@ def run(filename):
         retval = retval >> 8
     if sig_val == signal.SIGINT:
         #Convenience method to exit if the user interrupts it while the child is running.
-        error_quit("linedd terminated by interrupt signal from child process (use --signal to prevent this).")
+        error_quit("\nlinedd terminated by interrupt signal from child process (use --signal to prevent child process signals from terminating linedd).")
     return retval
 
 
@@ -265,7 +271,7 @@ def writeTo(filename):
 
     
 #sanity check: 
-testingFile = tempfile.NamedTemporaryFile(delete=False);
+testingFile = tempfile.NamedTemporaryFile(delete=False,suffix=extension);
 testingFileName = testingFile.name;
 testingFile.close();
 
